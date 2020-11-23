@@ -21,6 +21,12 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="DocsToText.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="EmailTools.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="GetEmails.py" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
