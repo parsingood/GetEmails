@@ -43,8 +43,10 @@ cursorChannels.execute('SELECT * FROM Channels where IsActive > 0 order by Chann
 
 for row in cursorChannels:
     
-    if bool(row.MailFolder):con = auth(row.MailServer,row.UserName,row.Password,row.MailFolder)
-    else:con = EmailTools.auth(row.MailServer,row.UserName,row.Password)
+    if bool(row.MailFolder):
+        con = EmailTools.auth(row.MailServer,row.UserName,row.Password,row.MailFolder)
+    else:
+        con = EmailTools.auth(row.MailServer,row.UserName,row.Password)
 
     isOk, messages = con.search(None, 'ALL')
     ids = messages[0]  # data is a list.
@@ -60,6 +62,7 @@ for row in cursorChannels:
 
  
     MailsBack = row.MailsBack if  hasattr(row, 'property') and  row.MailsBack else MailsBack
+    MailsBack = row.MailsBack if  row.MailsBack else MailsBack
     start_id = max( [ min( [max(int(x) for x in id_list), row.Mail_TopID ] ) - MailsBack if row.Mail_TopID else  0  , 0 ])
     new_id_list = [x for x in id_list if int(x) >= start_id ]
 
@@ -148,14 +151,26 @@ for row in cursorChannels:
                 PRO_cursor.commit()
 
 
-
-            raw_email = data[0][1]# converts byte literal to string removing b''
-            email_message = email.message_from_bytes(raw_email)
-
-
-            for part in email_message.walk():
+            for part in raw.walk():
                 if part.get_content_maintype() == 'multipart':
                     continue
+                if part.get_content_type() == 'text/html' :
+                    FileText = part.get_payload(decode=True)
+                    charset = part.get_content_charset('utf-8')
+                    try:
+                        FileTextString = FileText.decode(charset, 'replace')
+                    except:
+                        try:
+                            FileTextString = FileText.decode('latin1')
+                        except:
+                            FileTextString = "Error"
+                    s = 'update E_Folders set [BodyHTML] = ? where [FolderID] = ? ' 
+                    if  PRO_cursor :
+                        PRO_cursor.execute(s, FileTextString , PRO_FolderID )
+                        PRO_cursor.commit()
+ #                   EmailTools.insertFolder(cursor, PRO_cursor, FolderID, PRO_FolderID, 'body.html', '.HTML', FileTextString)
+                    continue
+
                 if part.get('Content-Disposition') is None:
                     continue
                 fileName = part.get_filename()        

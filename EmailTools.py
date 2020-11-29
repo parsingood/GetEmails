@@ -3,6 +3,9 @@ import imaplib
 import os
 import io
 import zipfile
+import pyunpack
+#import patool
+from pyunpack import Archive
 
 def encoded_words_to_text(encoded_words):
     try:
@@ -31,29 +34,30 @@ def get_body_decode(msg):
     else:
         body_from_payload = msg.get_payload(None,True)
         try:
-            return msg.body_from_payload.decode(msg.get_charsets()[0])
+            return body_from_payload.decode(msg.get_charsets()[0])
         except:
             #rawdata = open(file, "r").read()
             #result = chardet.detect(body_from_payload)
             #charenc = result['encoding']
-
             try:
                 return body_from_payload.decode(chardet.detect(body_from_payload)['encoding']) #'utf-8'
             except:
-                return body_from_payload.decode('latin1')
+                try:
+                    return body_from_payload.decode('utf-8') 
+                except:
+                    return body_from_payload.decode('latin1')
+                
+                
+ 
 
-           
-
-
-            #try:
-            #    return body_from_payload.decode(chardet.detect(body_from_payload)) #'utf-8'
-            #except:
-            #    return body_from_payload.decode('latin1')
+ 
 
 
 
 temp_path = "e:/test/att/"
+
 Attachments_path = 'e:/EATT/'
+
 def Add_FileText_to_Folder(cursor,PRO_cursor,FolderID,PRO_FolderID,fileName,FileText):
     
     if PRO_FolderID !=0 :
@@ -69,10 +73,8 @@ def Add_FileText_to_Folder(cursor,PRO_cursor,FolderID,PRO_FolderID,fileName,File
         return
 
     zipPath = ''
-    if file_extension.lower()[-3:] == "zip" : zipPath = 'zip/'
-    if file_extension.lower()[-2:] == "z7"  : zipPath = 'z7/'
-    if file_extension.lower()[-3:] == "arj"  : zipPath = 'arj/'
-    if zipPath != '' :
+    if file_extension.lower()[-3:] == "zip" : 
+        zipPath = 'zip/'
         my_file_io = io.BytesIO(FileText)
         with zipfile.ZipFile(my_file_io, 'r') as zip_ref:
             directory=temp_path + zipPath + str(FolderID) + '/' + fileName +  '/'
@@ -82,6 +84,24 @@ def Add_FileText_to_Folder(cursor,PRO_cursor,FolderID,PRO_FolderID,fileName,File
                 FileText = f.read()
                 f.close()
                 Add_FileText_to_Folder(cursor,PRO_cursor,FolderID,PRO_FolderID, filenameOnly + "~" + current_filename,FileText)
+        return
+
+ #   if file_extension.lower()[-2:] == "z7"  : zipPath = 'z7/'
+    if file_extension.lower()[-3:] == "arj"  :
+        zipPath = 'arj/'
+        os.makedirs(temp_path + zipPath + str(FolderID), exist_ok=True) 
+        f = open(temp_path + zipPath + str(FolderID) + '/' + fileName, 'wb')
+        f.write(FileText)
+        f.close()
+#        my_file_io = io.BytesIO(FileText)
+        directory=temp_path + zipPath + str(FolderID) + '/' + filenameOnly 
+        os.makedirs(directory, exist_ok=True) 
+        Archive(temp_path + zipPath + str(FolderID) + '/' + fileName).extractall(directory+'/')
+        for current_filename in os.listdir(directory):
+            f = open(os.path.join(directory, current_filename),'rb')
+            FileText = f.read()
+            f.close()
+            Add_FileText_to_Folder(cursor,PRO_cursor,FolderID,PRO_FolderID, filenameOnly + "~" + current_filename,FileText)
         return
 
     if file_extension.lower()[-3:] == "eml" :
@@ -110,6 +130,24 @@ def Add_FileText_to_Folder(cursor,PRO_cursor,FolderID,PRO_FolderID,fileName,File
 
 
     if FileTextString != "":
+        insertFolder(cursor, PRO_cursor, FolderID, PRO_FolderID, fileName, file_extension, FileTextString)
+        #s = 'insert into E_TXT (FolderID,TXT_Name,FileText) select ?, ?, ? '
+        #cursor.execute(s,FolderID,fileName, FileTextString)
+        #cursor.commit()
+
+        #if  PRO_cursor :
+        #   s = "SELECT max(ATT_TypeID) TypeID FROM E_ATT_Types where ATT_Type = ? "
+        #   PRO_cursor.execute(s, file_extension.upper() )
+        #   ATT_TypeID = None
+        #   for r in PRO_cursor: 
+        #       ATT_TypeID = r.TypeID
+
+        #   s = 'insert into E_TXT (FolderID,TXT_Name,FileText,ATT_TypeID) select ?, ?, ?, ?  '
+        #   PRO_cursor.execute(s,PRO_FolderID,fileName, FileTextString, ATT_TypeID)
+        #   PRO_cursor.commit()
+
+
+def insertFolder(cursor, PRO_cursor, FolderID, PRO_FolderID, fileName, file_extension, FileTextString):
         s = 'insert into E_TXT (FolderID,TXT_Name,FileText) select ?, ?, ? '
         cursor.execute(s,FolderID,fileName, FileTextString)
         cursor.commit()
@@ -124,9 +162,6 @@ def Add_FileText_to_Folder(cursor,PRO_cursor,FolderID,PRO_FolderID,fileName,File
            s = 'insert into E_TXT (FolderID,TXT_Name,FileText,ATT_TypeID) select ?, ?, ?, ?  '
            PRO_cursor.execute(s,PRO_FolderID,fileName, FileTextString, ATT_TypeID)
            PRO_cursor.commit()
-
-
-
 
 
 
